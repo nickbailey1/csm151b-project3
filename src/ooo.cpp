@@ -265,14 +265,26 @@ void Core::commit() {
 void Core::pipeline_flush() {
   // restore RAT from current flush checkpoint
   // TODO:
+  checkpoints_.restore(flush_rob_, RAT_);
 
   // invalidate younger instructions in pipeline structures
   // include chejckpoints, ROB, reservation stations, LSQ, CDB, and functional units
   // TOOD:
+  checkpoints_.invalidate(flush_rob_);
+  ROB_.invalidate(flush_rob_);
+  RS_.invalidate(flush_rob_);
+  LSQ_->invalidate(flush_rob_);
+  CDB_.invalidate(flush_rob_);
+  for (auto fu : FUs_) {
+    fu->invalidate(flush_rob_);
+  }
 
   // reset pipeline queues and states
   // include decode/issue queue
   // TODO:
+  decode_queue_->reset();
+  issue_queue_->reset();
+  
   exit_pending_ = false;
   fetch_lock_->write(false);
 
