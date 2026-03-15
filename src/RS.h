@@ -41,11 +41,20 @@ public:
       // update operands if this RS entry is waiting for them
       // set a resolved operand ROB to INVALID_ROB
       // TODO;
+      if (rs1_rob == result.rob_tag) {
+        rs1_data = result.value;
+        rs1_rob = INVALID_ROB;
+      }
+      if (rs2_rob == result.rob_tag) {
+        rs2_data = result.value;
+        rs2_rob = INVALID_ROB;
+      }
     }
 
     bool operands_ready() const {
       // operands are ready when there are no pending ROB producers for rs1 and rs2
       // TOOD:
+      return (rs1_rob == INVALID_ROB) && (rs2_rob == INVALID_ROB);
     }
   };
 
