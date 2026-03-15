@@ -40,7 +40,7 @@ void Core::issue() {
   }
 
   uint32_t rs1_data = 0, rs2_data = 0;
-  uint32_t rs1_rob = -1, rs2_rob = -1;
+  uint32_t rs1_rob = INVALID_ROB, rs2_rob = INVALID_ROB;
 
   // load rs1 data
   // check the RAT if value is in the registe file
@@ -158,25 +158,25 @@ void Core::execute() {
   // iterate through all reservation stations, check if the entry is valid, and operands are ready
   // once a candidate is found, issue the instruction to its corresponding nont-busy functional uni.
   // HINT: should use RS_ and FUs_
+  int32_t oldest_rs = -1;
   for (uint32_t rs_index = 0; rs_index < RS_.size(); ++rs_index) {
     auto& entry = RS_.get_entry(rs_index);
     // TODO:
-    if (!entry.valid) {
-      continue;
-    }
-    if (!entry.operands_ready()) {
-      continue;
-    }
+    if (!entry.operands_ready() || !entry.valid) continue;
     //find functional unit for this instr
     auto fu_type = entry.instr->getFUType();
     auto fu = FUs_.at((int)fu_type);
-    if (fu->full()) {
-      continue;
+    if (fu->full()) continue;
+    if (oldest_rs < 0 || is_rob_younger(entry.rd_rob, RS_.get_entry(oldest_rs).rd_rob)) {
+      oldest_rs = rs_index;
     }
-    // dispatch to functional unit
+  }
+  if (oldest_rs >= 0) {
+    auto& entry = RS_.get_entry(oldest_rs);
+    auto fu_type = entry.instr->getFUType();
+    auto fu = FUs_.at((int)fu_type);
     fu->push(entry.instr, entry.rd_rob, entry.rs1_data, entry.rs2_data);
-    RS_.release(rs_index);
-    break; // one dispatch per cycle per RS scan
+    RS_.release(oldest_rs);
   }
 }
 
@@ -265,7 +265,7 @@ void Core::commit() {
 void Core::pipeline_flush() {
   // restore RAT from current flush checkpoint
   // TODO:
-  checkpoints_.restore(flush_rob_, RAT_);
+  checkpoints_.restore(flush_rob_, &RAT_);
 
   // invalidate younger instructions in pipeline structures
   // include chejckpoints, ROB, reservation stations, LSQ, CDB, and functional units
@@ -284,7 +284,7 @@ void Core::pipeline_flush() {
   // TODO:
   decode_queue_->reset();
   issue_queue_->reset();
-  
+
   exit_pending_ = false;
   fetch_lock_->write(false);
 
