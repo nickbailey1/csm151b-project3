@@ -65,6 +65,9 @@ void ReorderBuffer::update(const CDBResult& result) {
 
   // Udate the ROB entry
   // TODO:
+  // mark entry as completed and store result value for writeback
+  entry.result = result.value;
+  entry.ready = true;
 
   if (entry.instr->getExeFlags().use_rd) {
     DT(2, "Writeback: value=0x" << std::hex << result.value << std::dec << ", " << *entry.instr);
