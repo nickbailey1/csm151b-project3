@@ -35,6 +35,9 @@ void Core::issue() {
 
   // check for structural hazards
   // TODO
+  if (ROB_.full() || RS_.full() || (is_lsu && LSQ_->full())) {
+    return;
+  }
 
   uint32_t rs1_data = 0, rs2_data = 0;
   uint32_t rs1_rob = -1, rs2_rob = -1;
@@ -46,6 +49,26 @@ void Core::issue() {
   // remember to first check if the instruction actually uses rs1
   // HINT: should use RAT, ROB, and reg_file_
   // TODO:
+  if (exe_flags.use_rs1) {
+    uint32_t rs1 = instr->getRs1();
+    if (RAT_.exists(rs1)) {
+      // value being produce by ROB entry
+      uint32_t producing_rob = RAT_.get(rs1);
+      auto& rob_entry = ROB_.get_entry(producing_rob);
+      if (rob_entry.ready) {
+        //value already computed. grab directly
+        rs1_data = rob_entry.result;
+      }
+      else {
+        // still in flight, track dependency
+        rs1_rob = producing_rob;
+      }
+    }
+    else {
+      // value in architectural reg file
+      rs1_data = reg_file_.at(rs1);
+    }
+  }
 
   // load rs2 data
   // check the RAT if value is in the registe file
@@ -54,6 +77,26 @@ void Core::issue() {
   // remember to first check if the instruction actually uses rs1
   // HINT: should use RAT, ROB, and reg_file_
   // TODO:
+  if (exe_flags.use_rs2) {
+    uint32_t rs2 = instr->getRs2();
+    if (RAT_.exists(rs2)) {
+      // value being produced by ROB entry
+      uint32_t producing_rob = RAT_.get(rs2);
+      auto& rob_entry = ROB_.get_entry(producing_rob);
+      if (rob_entry.ready) {
+        // value alreadyc computed. grab directly
+        rs2_data = rob_entry.result;
+      }
+      else {
+        // still in flight
+        rs2_rob = producing_rob;
+      }
+    }
+    else {
+      // value in reg file
+      rs2_data = reg_file_.at(rs2);
+    }
+  }
 
   // allocate new ROB entry
   uint32_t rob_tag = ROB_.allocate(instr);
@@ -76,10 +119,15 @@ void Core::issue() {
   if (is_lsu) {
     // allocate LSQ entry and set instruction metadata
     // TODO:
+    uint32_t lsq_idx = LSQ_->allocate(rob_tag, instr);
+    instr_meta_t meta = instr->getMetaData();
+    meta.lsu.lsq_idx = lsq_idx;
+    instr->setMetaData(meta);
   }
 
   // issue instruction to reservation station
   // TODO:
+  RS_.issue(rob_tag, rs1_rob, rs2_rob, rs1_data, rs2_data, instr);
 
   DT(2, "Issue: " << *instr);
 
