@@ -147,6 +147,11 @@ void Core::execute() {
   // HINT: should use CDB_ and FUs_
   for (auto fu : FUs_) {
     // TODO:
+    if (!fu->empty() && CDB_.empty()) {
+      auto result = fu->pop();
+      CDB_.push(result);
+      break;
+    }
   }
 
   // schedule ready instructions to corresponding functional units
@@ -156,6 +161,22 @@ void Core::execute() {
   for (uint32_t rs_index = 0; rs_index < RS_.size(); ++rs_index) {
     auto& entry = RS_.get_entry(rs_index);
     // TODO:
+    if (!entry.valid) {
+      continue;
+    }
+    if (!entry.operands_ready()) {
+      continue;
+    }
+    //find functional unit for this instr
+    auto fu_type = entry.instr->getFUType();
+    auto fu = FUs_.at((int)fu_type);
+    if (fu->full()) {
+      continue;
+    }
+    // dispatch to functional unit
+    fu->push(entry.instr, entry.rd_rob, entry.rs1_data, entry.rs2_data);
+    RS_.release(rs_index);
+    break; // one dispatch per cycle per RS scan
   }
 }
 
@@ -172,14 +193,17 @@ void Core::writeback() {
     auto& entry = RS_.get_entry(rs_index);
     if (entry.valid) {
       // TODO:
+      entry.update_operands(cdb_data);
     }
   }
 
   // update ROB
   // TODO:
+  ROB_.update(cdb_data);
 
   // clear CDB
   // TODO:
+  CDB_.pop();
 
   RS_.dump();
   LSQ_->dump();
