@@ -224,9 +224,15 @@ void Core::commit() {
 
     // Notify LSQ to commit if instruction is load/store
     // TODO:
+    if (exe_flags.is_load || exe_flags.is_store) {
+      LSQ_->commit(head_tag);
+    }
 
     // update register file if needed
     // TODO:
+    if (exe_flags.use_rd) {
+      reg_file_.at(instr->getRd()) = rob_head.result;
+    }
 
     // clear the RAT if still pointing to this ROB entry
     if (exe_flags.use_rd && RAT_.exists(instr->getRd())) {
@@ -240,6 +246,7 @@ void Core::commit() {
 
     // pop ROB entry
     // TODO:
+    ROB_.pop();
 
     DT(2, "Commit: " << *instr);
 
