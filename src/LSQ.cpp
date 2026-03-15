@@ -38,11 +38,13 @@ inline bool ranges_overlap(uint32_t a0, uint32_t a1, uint32_t b0, uint32_t b1) {
 inline bool is_ready_store(const LoadStoreQueue::lsq_entry_t& entry) {
   // A store is ready to execute when it is committed and both its effective address and data are available.
   // TODO:
+  return entry.valid && entry.state == LoadStoreQueue::lsq_state_t::Committed && entry.addr_valid && entry.data_valid;
 }
 
 inline bool is_ready_load(const LoadStoreQueue::lsq_entry_t& entry) {
   // A load is ready to execute when it is pending and its effective address is available.
   // TODO:
+  return entry.valid && entry.state == LoadStoreQueue::lsq_state_t::Pending && entry.addr_valid;
 }
 
 inline std::optional<uint32_t> try_forward_from_store(
@@ -233,7 +235,7 @@ bool LoadStoreQueue::analyze_load_dependencies(uint32_t load_idx, bool* can_forw
     // If an older load already produced the same value at the same address and their func3 match,
     // we can reuse it directly (load-to-load forwarding).
     if (older_flags.is_load) {
-      bool is_candidate = /* TODO */;
+      bool is_candidate = older.data_valid && older.addr_valid && (older.addr == load.addr) && (older.instr->getFunc3() == load.instr->getFunc3());/* TODO */;
       if (is_candidate) {
         if (!*can_forward || is_rob_younger(older.rob_tag, fwd_rob_tag)) {
           *can_forward = true;
