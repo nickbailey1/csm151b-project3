@@ -235,7 +235,7 @@ bool LoadStoreQueue::analyze_load_dependencies(uint32_t load_idx, bool* can_forw
     // If an older load already produced the same value at the same address and their func3 match,
     // we can reuse it directly (load-to-load forwarding).
     if (older_flags.is_load) {
-      bool is_candidate = older.data_valid && older.addr_valid && (older.addr == load.addr) && (older.instr->getFunc3() == load.instr->getFunc3());/* TODO */;
+      bool is_candidate = older.data_valid && older.addr_valid && (older.addr == load.addr) && (older.instr->getFunc3() == load.instr->getFunc3());
       if (is_candidate) {
         if (!*can_forward || is_rob_younger(older.rob_tag, fwd_rob_tag)) {
           *can_forward = true;
